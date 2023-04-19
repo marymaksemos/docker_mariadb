@@ -1,0 +1,74 @@
+1. Vad gör "ADD employees.sql /docker-entrypoint-initdb.d/employees.sql" i er Dockerfile? 
+
+Svar: I Dockerfilen kopierar filen employees.sql från byggkontexten till mappen /docker-entrypoint-initdb.d/ 
+i den resulterande Docker-bilden.
+
+/docker-entrypoint-initdb.d/ är en speciell katalog som används av mariadb-bildens entrypoint-skript 
+för att kolla efter SQL-filer som ska köras när containern startas första gången.
+ Dessa filer används för att skapa databaser, tabeller och annan data i databasen när containern först startas.
+
+Så genom att lägga till employees.sql i /docker-entrypoint-initdb.d/-katalogen
+ kommer det att köras när containern startas första gången och databasen workplace och tabellen employees 
+ kommer att skapas.
+
+2: Hur löste ni delen "Skapa/läs data från databasen med mariadb.py". Skriv kortfattat nedan. 
+
+Svar: 
+
+-- Edit the Dockerfile 
+   < FROM mariadb
+     ENV MARIADB_ROOT_PASSWORD="mary"
+     ENV MARIADB_DATABASE="workplace"
+     ENV MARIADB_USER="mary"
+     ENV MARIADB_PASSWORD="mary"
+     ADD employees.sql /docker-entrypoint-initdb.d/employees.sql
+     EXPOSE 3306 >
+
+--To build a  Docker image using a Dockerfile in the current directory (.) and tag it with the name my-mariadb-image. used this command
+   < docker build -t my-mariadb-image .>
+
+-- To create and start a new container named my-mariadb-container from the my-mariadb-image image,
+ and map port 3306 in the container to port 3306 on the host system.I used this command
+ < docker run -d -p 3306:3306 --name my-mariadb-container my-mariadb-image >
+
+-- Edit the mariadb.py script to connect databasen
+   <  connection = database.connect(
+    user="root",
+    password="mary",
+    host="localhost",
+    database="workplace")  >
+
+--Copy the python file to the container using the docker cp command:
+  < docker cp mariadb.py mariadb-container:/mariadb.py >
+
+-- To start an interactive shell session inside a running Docker container named mariadb-container.
+   < docker exec -it mariadb-container /bin/bash >
+
+--  To  install the MySQL Connector/Python package , I used this command 
+  < apt-get update && apt-get install -y python3-pip
+    pip install mysql-connector-python >
+
+--To run script   
+   <python3 mariadb.py>
+
+-- To test the databasen 
+   from other machine 
+   < mariadb -u mary -h 192.168.33.11 -p 
+    use workplace;
+    select * from employees; >
+
+
+
+3: Stötte ni på andra problem och hur löste ni dessa? Svara nedan.
+
+Svar: 
+when i want use this command when container exit
+docker start my-mariadb-container
+Error response from daemon: driver failed programming external connectivity on endpoint my-mariadb-container (71bf66c217303dcba687c6a9aa54d7c043ce2052ed229e07f3f62dd785c1a30b): Error starting userland proxy: listen tcp4 0.0.0.0:3306: bind: address already in use
+Error: failed to start containers: my-mariadb-container
+
+use this command for list the processes that are using port 3306
+ --sudo lsof -i :3306
+ and then use command to kill the processes
+ --sudo kill <PID>
+start igen container 
